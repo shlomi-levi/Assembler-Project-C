@@ -1,0 +1,1 @@
+void cleanUp(LabelNode *, int, EntryNode *, EntryNode *);

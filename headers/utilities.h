@@ -1,0 +1,21 @@
+
+bool onlySpacesAndTabs(char * line);
+bool getWord(char * word, int wordLen, char ** ptr);
+bool startsWith(char * str, char * start);
+bool endsWith(char * str, char * end);
+void * my_calloc(int num, int size);
+void * my_realloc(void * ptr, int new_size);
+void * my_malloc(int size);
+void addExtension(char * out, char * fileName, char * extension);
+bool isEmptyLine(char * line);
+void getBase2(char * string, int n, int numOfBits);
+void removeTrailingSpaces(char string[]);
+bool equalsIgnoreSpaces(char * source, char * compare);
+int contains(char * str, char c);
+void substring(char * dest, char * str, int start, int end);
+void addToBuffer(char * buffer, int bufferSize, char * string, int * bufferLengthPointer, FILE * f);
+void flushBuffer(char * buffer, int * currentBufferLength, FILE * f);
+bool isNumber(char * str);
+void removeSpacesFromStart(char * string);
+int countOccurences(char * str, char c);
+void zeroBits(char *src, int count);

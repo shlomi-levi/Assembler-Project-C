@@ -1,0 +1,8 @@
+
+laavor al handleJumpCommand.. ze lebasof.
+
+check preprocessor - seems to be working fine.
+לבנות כמה קבצי טסטים
+
+לתעד את הקוד
+לשנות שכל הפלט יהיה לפי בסיס 2 ייחודי
