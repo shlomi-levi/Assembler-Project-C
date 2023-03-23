@@ -2,6 +2,7 @@
 #include "../headers/labels.h"
 #include "../headers/commands.h"
 
+/* An array that holds data about commands */
 static const COMMANDS_INFO commands [NUM_OF_COMMANDS] = {
         { "mov", MOV, 2, {true, true, true}, {false, true, true}},
         { "cmp", CMP, 2, {true, true, true}, {true, true, true}},
@@ -21,7 +22,7 @@ static const COMMANDS_INFO commands [NUM_OF_COMMANDS] = {
         { "stop", STOP, 0, {false, false, false}, {false, false, false}}
 };
 
-/* This function breaks down a comment to its parameters, and checks the validity of them according to the
+/* This function breaks down a command to its parameters, and checks the validity of them according to the
     allowed addressing modes */
 
 commandOutput parseCommand(char * line) {
@@ -39,39 +40,34 @@ commandOutput parseCommand(char * line) {
 
     memset(outputWord, 0, MAX_OUTPUT_WORD);
 
-    getWord(word, MAX_LINE_LENGTH, &line);
+    getWord(word, MAX_LINE_LENGTH, &line); /* Firstly, get the commands name */
 
+    /* If no command by this name, exists, this isn't a valid command. */
     if(!isCommand(word)) {
         output.validCommand = false;
         strcpy(output.errorMessage, "Invalid command");
         return output;
     }
 
-    cmd = findCommand(word);
+    cmd = findCommand(word); /* Find the command that has that name */
     
     output.commandType = cmd.commandType;
     output.numOfWords = 1;
 
-    if(cmd.commandType == BNE || cmd.commandType == JMP || cmd.commandType == JSR) {
-        output.numOfWords++;
+    if(isJumpCommand(cmd.commandType)) {
+        output.numOfWords++; /* Now we have a word for the jump parameter */
         handleJumpCommand(&output, cmd, line); /* Handle Jump command */
         return output;
     }
     
     else {
-        output.isJumpAddressing = false;
-
         switch(cmd.numOfArguments) {
             case 0: {
-                getWord(word, MAX_LINE_LENGTH, &line);
-
                 if(!isEmptyLine(line)) {
                     output.validCommand = false;
                     strcpy(output.errorMessage, "Invalid usage of command. This command has no parameters");
                     break;
                 }
-                output.srcAddressing = addressingMode_IRRELEVANT;
-                output.destAddressing = addressingMode_IRRELEVANT;
                 break;
             }
 
@@ -105,7 +101,6 @@ commandOutput parseCommand(char * line) {
                 else
                     strcpy(output.destParameter, word);
 
-                output.srcAddressing = IRRELEVANT;
                 break;
             }
 
@@ -127,7 +122,6 @@ commandOutput parseCommand(char * line) {
 
                 output.srcAddressing = mode;
 
-
                 if(mode == addressingMode_IMMEDIATE)
                     strcpy(output.srcParameter, number);
 
@@ -141,7 +135,6 @@ commandOutput parseCommand(char * line) {
                     output.validCommand = false;
                     break;
                 }
-                
 
                 handleArgument(word, &output, cmd.legalDestAddressing, number, 2);
 
@@ -172,22 +165,6 @@ commandOutput parseCommand(char * line) {
 
     if(!output.validCommand)
         return output;
-    
-    if(output.srcAddressing != addressingMode_IRRELEVANT) {
-        if(!validAddressingMode(output.srcAddressing, cmd.legalSrcAddressing)) {
-            output.validCommand = false;
-            strcpy(output.errorMessage, "Invalid addressing mode for source parameter");
-            return output;
-        }
-    }
-
-    if(output.destAddressing != addressingMode_IRRELEVANT) {
-        if(!validAddressingMode(output.destAddressing, cmd.legalDestAddressing)) {
-            output.validCommand = false;
-            strcpy(output.errorMessage, "Invalid addressing mode for destination parameter");
-            return output;
-        }
-    }
 
     /* Now to calculate the number of words needed for this command */
 
@@ -205,6 +182,9 @@ commandOutput parseCommand(char * line) {
     return output;
 }
 
+/* This function handles an argument - it checks wether its addressing mode is legal, 
+and if that argument is an immediate, it makes sure it is in the range of 12 bits. */
+
 void handleArgument(char * word, commandOutput * output, AddressingStruct legalAddressing, char * number, int argNumber) {
     enum addressingModes mode = getAddressingMode(word);
 
@@ -214,6 +194,7 @@ void handleArgument(char * word, commandOutput * output, AddressingStruct legalA
         return;
     }
     
+    /* If the parameter is an immediate, we need to check that it is within the range of 12 bits */
     if(mode == addressingMode_IMMEDIATE) {
         memset(number, 0, MAX_LINE_LENGTH);
         parseImmediate(number, word, output);
@@ -303,8 +284,7 @@ void handleJumpCommand(commandOutput * output, COMMANDS_INFO cmd, char * line) {
     memset(srcParam, 0, MAX_LINE_LENGTH);
     memset(destParam, 0, MAX_LINE_LENGTH);
 
-    removeSpacesFromStart(line);
-    removeTrailingSpaces(line);
+    removeRedundantSpaces(line);
 
     output->srcAddressing = addressingMode_IRRELEVANT;
     output->destAddressing = addressingMode_IRRELEVANT;
@@ -559,6 +539,10 @@ COMMANDS_INFO findCommand(char * word) {
 }
 
 bool validAddressingMode(enum addressingModes am, AddressingStruct str) {
+
+    if(am == addressingMode_INVALID)
+        return false;
+    
     switch(am) {
         case addressingMode_IMMEDIATE:
             return str.Addressing_IMMEDIATE;

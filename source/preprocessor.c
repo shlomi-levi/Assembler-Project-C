@@ -41,11 +41,12 @@ void preProcessFile(char * fileName) {
     FILE * input = NULL;
     FILE * output = NULL;
 
-    MacroNode * macroTable;
-    MacroNode currentMacro;
+    MacroNode * macroTable; /* Macro Table */
+    MacroNode currentMacro; /* Current Macro we're working on */
 
     bool macroDefinitionInProcess = false;
     bool validFile = true;
+    bool hasMacros = false;
 
     char fileToOpen[MAX_FILENAME_LEN];
     char fileToWriteTo[MAX_FILENAME_LEN];
@@ -54,9 +55,9 @@ void preProcessFile(char * fileName) {
     char temp[MAX_LINE_LENGTH];
     char buffer[BUFFER_SIZE];
 
-    char * line2;
+    char * line2; /* A pointer to the current line, I'm using it to parse the line word by word */
 
-    int lineNumber = 0;
+    int lineNumber = 0; /* line number variable so that in case of errors I would be able to print the number of line in which the error occured. */
 
     int macroCount = 0;
 
@@ -64,7 +65,7 @@ void preProcessFile(char * fileName) {
 
     int currentBufferLength = 0;
 
-    int i;
+    int i; /* Iterator */
 
     addExtension(fileToOpen, fileName, "as");
     addExtension(fileToWriteTo, fileName, "am");
@@ -84,32 +85,34 @@ void preProcessFile(char * fileName) {
         return;
     }
 
-    macroTable = my_calloc(1, sizeof(MacroNode));
     memset(buffer, 0, BUFFER_SIZE);
 
     /* Reads a line from the file */
     while(fgets(line, MAX_LINE_LENGTH, input) != NULL) {
         lineNumber++;
 
-        removeSpacesFromStart(line);
-        removeTrailingSpaces(line);
+        removeRedundantSpaces(line);
 
-        strcat(line, "\n");
+        strcat(line, "\n"); /* Removing the spaces also removed the \n character so I'll add it. */
         
         if(isEmptyLine(line) || isComment(line)) /* Ignore comments and empty lines*/
             continue;
 
         line2 = line;
 
-        if(macroDefinitionInProcess) {
-            if(!macroEnding(line)) {
+        if(macroDefinitionInProcess) { /* If there's currently a macro definition */
+            if(!macroEnding(line)) { /* If the current line isnt 'endmcr', then add the current line to the current macro's definition */
                 addToMacroDefinition(&currentMacro, line);
                 continue;
             }
 
-            /* If this is the end of the macro */
+            /* If this is the end of the macro, add the macro to the macro's table and skip the rest of the iteration (continue) */
 
-            macroTable = my_realloc(macroTable, sizeof(MacroNode) * macroCount); /* Expand macro table size */
+            macroCount++;
+            
+            macroTable = (hasMacros) ? my_realloc(macroTable, sizeof(MacroNode) * macroCount) : my_malloc(sizeof(MacroNode)); /* Expand macro table size */
+
+            hasMacros = true;
 
             macroTable[macroCount - 1] = currentMacro;
 
@@ -118,7 +121,7 @@ void preProcessFile(char * fileName) {
             continue;
         }
 
-        if(!isMacroDefinitionStatement(line)) {
+        if(!isMacroDefinitionStatement(line)) { /* If this isn't a macro definition statement, go through each word in the line and where there are macros parse them */
             while(getWord(temp, MAX_LINE_LENGTH, &line2)) {
                 if(isEmptyLine(temp))
                     continue;
@@ -153,18 +156,18 @@ void preProcessFile(char * fileName) {
         currentMacro.definition = my_calloc(MAX_LINE_LENGTH, sizeof(char));
         currentMacro.size = MAX_LINE_LENGTH;
 
-        macroCount++;
-
         macroDefinitionInProcess = true;
 
         continue;
     }
 
-    if(currentBufferLength > 0)
+    if(currentBufferLength > 0) /* Flush buffer if the buffer currently holds data */
         flushBuffer(buffer, &currentBufferLength, output);
     
     fclose(input);
     fclose(output);
+
+    /* Free all the memory allocations we have used */
 
     if(macroTable != NULL) {
         for(i = 0 ; i < macroCount ; i++) {
@@ -174,7 +177,7 @@ void preProcessFile(char * fileName) {
         free(macroTable);
     }
         
-    if(!validFile) {
+    if(!validFile) { /* If the .as file had errors, remove the output file (the '.am' file). */
         remove(fileToWriteTo);
         return;
     }

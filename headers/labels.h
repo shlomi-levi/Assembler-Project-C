@@ -11,7 +11,6 @@ void addEntryToArray(EntryNode **, int, EntryNode);
 void addDataLabel(LabelNode **, int, char *, int *, int);
 bool isValidLabelName(char *);
 bool labelExistsInArray(LabelNode *, int, char *);
-bool validateLabels(LabelNode *, int, EntryNode *, int, EntryNode *, int);
-void printProblematicLabels(LabelNode *, int, EntryNode *, int, EntryNode *, int);
+char * getProblematicLabels(LabelNode *, int, EntryNode *, int, EntryNode *, int);
 int addAddressesToDataLabels(LabelNode *, int, int *);
 

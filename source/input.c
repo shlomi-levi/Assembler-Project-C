@@ -1,7 +1,11 @@
+/* This file is responsible for lines classification and everything input related (except commands). */
+
 #include "../headers/headers.h"
 #include "../headers/input.h"
 #include "../headers/commands.h"
 #include "../headers/labels.h"
+
+/* This function creates an empty line classification */
 
 LineClassification createEmptyLineClassification() {
     LineClassification lc;
@@ -19,13 +23,15 @@ LineClassification createEmptyLineClassification() {
     return lc;
 }
 
+/* This function classifies a line */
+
 LineClassification classifyLine(char * line, bool isSecondRun) {
     LineClassification lc = createEmptyLineClassification();
 
     char returnCommand[MAX_LINE_LENGTH];
     char word[MAX_LINE_LENGTH];
     
-    int colCounter = 0;
+    int colCounter = 0; /* for counting colons */
     bool hasLabel = false;
 
     memset(returnCommand, 0, MAX_LINE_LENGTH);
@@ -40,21 +46,21 @@ LineClassification classifyLine(char * line, bool isSecondRun) {
         return lc;
     }
     
-    getWord(word, MAX_LINE_LENGTH, &line);
+    getWord(word, MAX_LINE_LENGTH, &line); /* Get the first word of the line */
 
-    colCounter = countOccurences(word, ':');
+    colCounter = countOccurences(word, ':'); /* count the number of colons */
     
-    if(colCounter > 1) {
+    if(colCounter > 1) { /* If there's more than one colon, the line is invalid. */
         lc.type = LINE_INVALID;
         strcpy(lc.errorMessage, "Only one colon is allowed (and that is, when declaring a label).");
         return lc;
     }
 
-    if(colCounter == 1) {
-        int colonLocation = contains(word, ':');
-        word[colonLocation] = '\0';
+    if(colCounter == 1) { /* If there is one colon */
+        int colonLocation = contains(word, ':'); /* Find its position*/
+        word[colonLocation] = '\0'; /* Temporarily place a null character in that position so we could treat what comes before as a seperate string */
         
-        if(!isValidLabelName(word)) {
+        if(!isValidLabelName(word)) { /* If what comes before that colon isn't a valid label name, the line is invalid.*/
             lc.type = LINE_INVALID;
             strcpy(lc.errorMessage, "Illegal label name - Label name must start with a letter, and contain only alphanumeric characters.");
             return lc;
@@ -69,51 +75,58 @@ LineClassification classifyLine(char * line, bool isSecondRun) {
 
         strcpy(lc.label, word);
 
+        /* Place a space instead of the colon so that in case there wasn't a space between the colon and the next word,
+        now there is, and we can parse the string using the function getWord. */
         word[colonLocation] = ' ';
 
-        getWord(word, MAX_LINE_LENGTH, &line);
+        getWord(word, MAX_LINE_LENGTH, &line); /* get the next word */
 
         hasLabel = true;
     }
 
+    /* Handle .extern or .entry lines */
     if(!strcmp(word, ".extern") || !strcmp(word, ".entry")) {
 
         if(!strcmp(word, ".extern")) {
             lc.type = LINE_EXTERN;
 
             if(hasLabel)
-                lc.labelForExtern = true;
+                lc.labelForExtern = true; /* So that we woud print a warning */
         }
         
         else {
             lc.type = LINE_ENTRY;
 
             if(hasLabel)
-                lc.labelForEntry = true;
+                lc.labelForEntry = true; /* So that we woud print a warning */
         }
         
-        if(!isSecondRun)
-            handleExternOrEntry(&lc, line);
+        if(!isSecondRun) /* If this isn't the second run */
+            handleExternOrEntry(&lc, line); /* Further handle .extern or .entry line*/
 
         return lc;
     }
 
+    /* Handle .data lines */
     if(!strcmp(word, ".data")) {
-        lc.type = LINE_DATA;
+        lc.type = LINE_VARIABLE;
 
-        if(!isSecondRun)
-            readData(&lc, line);
+        if(!isSecondRun) /* If this isn't the second run */
+            readData(&lc, line); /* Read the data */
 
         return lc;
     }
 
+    /* Handle .string lines */
     if(!strcmp(word, ".string")) {
-        lc.type = LINE_DATA;
+        lc.type = LINE_VARIABLE;
         
-        if(!isSecondRun)
-            readString(&lc, line);
+        if(!isSecondRun) /* If this isn't the second run */
+            readString(&lc, line); /* Read the string */
         return lc;
     }
+
+    /* If we have reached thus far, the line should be a command since there are no other options left. */
 
     if(!isCommand(word)) {
         lc.type = LINE_INVALID;
@@ -130,16 +143,19 @@ LineClassification classifyLine(char * line, bool isSecondRun) {
     return lc;
 }
 
+/* This function reads a .data line,
+It recieves a pointer to a .data variable declaration, after the .data part. */
+
 void readData(LineClassification * lc, char * line) {
-    int count = 0;
+    int count = 0; /* Number of integers we've read */
     int i = 0;
     int * dataArray = NULL;
-    int len;
+    int len; /* For the length of the string */
     
     bool comma = false; /* Is comma permitted at this stage */
     bool sign = true; /* Is sign permitted at this stage */
-    bool digit = true;
-    bool numberInProgress = true;
+    bool digit = true; /* Is digit permitted at this stage */
+    bool numberInProgress = true; /* Are we currently parsing a number */
 
     bool holdsData = false;
 
@@ -147,7 +163,8 @@ void readData(LineClassification * lc, char * line) {
     char charArray[2];
     char c;
 
-    removeSpacesFromStart(line);
+    /* Get rid of spaces from the start of the string and the end of the string. */
+    removeRedundantSpaces(line);
     
     len = strlen(line);
 
@@ -155,8 +172,11 @@ void readData(LineClassification * lc, char * line) {
 
     memset(currentNum, 0, MAX_LINE_LENGTH);
 
+    /* Loop through the string */
     for(i = 0 ; i < len ; i++) {
-        c = line[i];
+        c = line[i]; /* Get the current character */
+
+        /* Verify validity */
 
         if(c != ' ' && c != ',' && !isdigit(c) && c != '+' && c != '-') {
             lc->type = LINE_INVALID;
@@ -181,7 +201,7 @@ void readData(LineClassification * lc, char * line) {
 
             sign = false;
         }
-
+        
         else if(c == ',' || c == ' ') {
             if(c == ',')
                 comma = false;
@@ -189,6 +209,8 @@ void readData(LineClassification * lc, char * line) {
             if(!numberInProgress)
                 continue;
 
+            /* If we reach thus far and we've encountered a comma or a whitespace, the current number is over, we need to add it to the array */
+            
             count++;
 
             dataArray = (holdsData) ? realloc(dataArray, count * sizeof(int)) : malloc(sizeof(int));
@@ -206,16 +228,7 @@ void readData(LineClassification * lc, char * line) {
 
     }
 
-    if(!comma || !count) {
-        lc->type = LINE_INVALID;
-
-        if(!count)
-            strcpy(lc->errorMessage, "Data should contain at least one integer");
-        else
-            strcpy(lc->errorMessage, "Incorrect data format");
-
-        return;
-    }
+    /* If the string ends with a number and no space */
 
     if(numberInProgress) {
         count++;
@@ -224,97 +237,82 @@ void readData(LineClassification * lc, char * line) {
         
         dataArray[count - 1] = atoi(currentNum);
     }
+    
+    if(!comma || !count) {
+        lc->type = LINE_INVALID;
+
+        if(!count)
+            strcpy(lc->errorMessage, "Data should contain at least one integer"); /* If we haven't reaad at least one integer in the array */
+        else
+            strcpy(lc->errorMessage, "Incorrect data format"); /* If the string ends with ',' */
+
+        return;
+    }
 
     lc->data = dataArray;
     lc->dataLength = count;
-
-    lc->type = LINE_DATA; /* Should already be on that value, but just in case. */
 }
 
+/* This function reads a string from .string line */
 void readString(LineClassification * lc, char * line) {
     int i;
-    int start = DOESNT_CONTAIN;
-    int end = DOESNT_CONTAIN;
+    int j;
 
     char c = '"';
 
-    int len = strlen(line);
+    int len;
     int outputLen;
 
-    /* Find first " */
+    /* Remove spaces from start and end */
+    removeRedundantSpaces(line);
 
-    for(i = 0 ; i < len ; i++) {
-        if(line[i] != c) {
-            if(isspace(line[i]))
-                continue;
-            
-            lc->type = LINE_INVALID;
-            strcpy(lc->errorMessage, "Invalid string format. string should start with \"");
-            return;
-        }
-        start = i;
-        break;
-    }
+    len = strlen(line);
 
-    if(start == DOESNT_CONTAIN || start == len - 1) {
+    /* Check for all sorts of errors that could occur */
+
+    if(len < 2) {
         lc->type = LINE_INVALID;
-        strcpy(lc->errorMessage, "Invalid string format. string should include at least two apostrophes");
+        strcpy(lc->errorMessage, "Invalid string declaration - string must start with \" and end with \"");
         return;
     }
 
-
-    /* Find last " */
-    for(i = len - 1 ; i >= 0 ; i--) {
-        if(line[i] != c) {
-            if(isspace(line[i]))
-                continue;
-            
-            lc->type = LINE_INVALID;
-            strcpy(lc->errorMessage, "Invalid string format. string must end with \"");
-            return;
-        }
-
-        end = i;
-        break;
-    }
-
-    if(start == end || end == (start + 1)) {
+    if(line[0] != c) {
         lc->type = LINE_INVALID;
-        
-        if(start == end)
-            strcpy(lc->errorMessage, "Invalid string format. string should include at least two apostrophes");
-
-        else
-            strcpy(lc->errorMessage, "Invalid string - string cannot be empty.");
-
+        strcpy(lc->errorMessage, "Invalid string declaration - string must start with \"");
         return;
     }
 
-    lc->type = LINE_DATA;
+    if(line[len - 1] != c) {
+        lc->type = LINE_INVALID;
+        strcpy(lc->errorMessage, "Invalid string declaration - string must end with \"");
+        return;
+    }
 
-    start++; /* Location of first character to copy */
-    end--; /* Location of last character to copy */
+    lc->type = LINE_VARIABLE;
 
-    line += start;
+    outputLen = len - 2 + 1; /* Explanation for the calculation - the output's length is the length of the string, - 2 apostrophes, + null character. */
 
-    outputLen = end - start + 1;
+    lc->data = my_calloc(outputLen, sizeof(int)); /* Allocate memory for the data */
+    lc->dataLength = outputLen;
 
-    lc->data = my_calloc(outputLen + 1, sizeof(int));
-    lc->dataLength = outputLen + 1;
-
-    for(i = 0 ; i < outputLen; i++) {
+    /* Place the characters ascii codes inside the string array */
+    for(i = 1, j = 0 ; i < len - 1 && j < outputLen ; i++, j++) {
         int d = line[i];
-        lc->data[i] = d;
+        lc->data[j] = d;
     }
 
-    lc->data[lc->dataLength - 1] = 0;
+    lc->data[outputLen - 1] = 0; /* Since every string ends with '\0' = 0 */
 }
+
+/* This function further verifies that an .extern or .entry line is valid,
+The input is an .entry or .extern line (without a preceding label). */
 
 void handleExternOrEntry(LineClassification * lc, char * line) {
     char word[MAX_LABEL_LENGTH];
 
-    getWord(word, MAX_LABEL_LENGTH, &line);
+    getWord(word, MAX_LABEL_LENGTH, &line); /* Get the desired extern/entry label's name */
 
+    /* Verify that it is a valid label name */
     if(!isValidLabelName(word)) {
         lc->type = LINE_INVALID;
         strcpy(lc->errorMessage, "Illegal label name");
@@ -323,6 +321,7 @@ void handleExternOrEntry(LineClassification * lc, char * line) {
 
     strcpy(lc->label, word);
 
+    /* If there's something after the label, the line is invalid. */
     if(!isEmptyLine(line)) {
         lc->type = LINE_INVALID;
         strcpy(lc->errorMessage, "Only white spaces should be allowed after the label name");

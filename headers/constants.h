@@ -57,7 +57,7 @@ enum lineTypes {
     LINE_EMPTY,
     LINE_COMMENT,
     LINE_COMMAND,
-    LINE_DATA,
+    LINE_VARIABLE,
     LINE_ENTRY,
     LINE_EXTERN
 };

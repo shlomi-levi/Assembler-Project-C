@@ -24,7 +24,7 @@ void secondRun(char * fileName, LabelNode * labelArray, int labelArraySize, Entr
     int wordCount = FIRST_WORD_INDEX_IN_OUTPUT_FILE; /* Since the first word starts in index 100 */
     int bufferLen = 0;
 
-    int numOfCommandWords = endingOfCommandsEncoding - FIRST_WORD_INDEX_IN_OUTPUT_FILE;
+    int numOfCommandWords = endingOfCommandsEncoding - FIRST_WORD_INDEX_IN_OUTPUT_FILE; /* This is the address of the last word that belonged to a command */
 
     FILE * f = NULL;
     FILE * o = NULL;
@@ -52,8 +52,7 @@ void secondRun(char * fileName, LabelNode * labelArray, int labelArraySize, Entr
     /* Reads a line from the file */
     
     while(fgets(line, MAX_LINE_LENGTH, f) != NULL) {
-        removeSpacesFromStart(line);
-        removeTrailingSpaces(line);
+        removeRedundantSpaces(line);
         
         lc = classifyLine(line, true); /* Classify the line (is it a command, entry line, extern line etc..) */
 

@@ -1,3 +1,5 @@
+/* This file is responsible for the first run */
+
 #include "../headers/headers.h"
 #include "../headers/firstrun.h"
 #include "../headers/secondrun.h"
@@ -6,12 +8,17 @@
 #include "../headers/commands.h"
 #include "../headers/cleanup.h"
 
+/* First run function */
 void firstRun(char * fileName) {
+
     char fileToOpen[MAX_FILENAME_LEN];
     char line[MAX_LINE_LENGTH];
+    char * problems = NULL;
 
     FILE * f = NULL;
 
+    /* Label, entry, and labels to check arrays */
+    
     LabelNode * labelArray = NULL;
     EntryNode * entryArray = NULL;
     EntryNode * labelsToCheckArray = NULL;
@@ -19,7 +26,9 @@ void firstRun(char * fileName) {
     int labelArraySize = 0;
     int entryArraySize = 0;
     int labelsToCheckSize = 0;
-
+    
+    /* */
+    
     bool validFile = true;
     int lineNumber = 0;
     int wordCount = FIRST_WORD_INDEX_IN_OUTPUT_FILE;
@@ -49,10 +58,9 @@ void firstRun(char * fileName) {
     while(fgets(line, MAX_LINE_LENGTH, f) != NULL) {
         lineNumber++; /* Advance the line number */
 
-        removeSpacesFromStart(line);
-        removeTrailingSpaces(line);
+        removeRedundantSpaces(line); /* Get rid of spaces from start and end. */
 
-        lc = classifyLine(line, false);
+        lc = classifyLine(line, false); /* Classify the line */
         
         if(lc.type == LINE_EMPTY || lc.type == LINE_COMMENT)
             continue;
@@ -73,6 +81,7 @@ void firstRun(char * fileName) {
             case LINE_EXTERN:
                 l = findLabelPosition(labelArray, labelArraySize, lc.label);
             
+                /* If the external label already exists in the labels array */
                 if(l != NOT_FOUND) {
 
                     if(labelArray[l].isExternal) {
@@ -85,6 +94,8 @@ void firstRun(char * fileName) {
                     continue;
                 }
 
+                /* If the external label already exists in the entries array */
+
                 e = findEntryPosition(entryArray, entryArraySize, lc.label);
                 
                 if(e != NOT_FOUND) {
@@ -95,6 +106,7 @@ void firstRun(char * fileName) {
                     continue;
                 }
 
+                /* Otherwise, add the label as external */
                 addLabel(&labelArray, labelArraySize, lc.label, true, 0);
 
                 labelArraySize++;
@@ -102,6 +114,7 @@ void firstRun(char * fileName) {
                 continue;
 
             case LINE_ENTRY:
+                /* Similar to the handling of LINE_EXTERN */
                 l = findLabelPosition(labelArray, labelArraySize, lc.label);
                 
                 if(l != NOT_FOUND) {
@@ -123,13 +136,14 @@ void firstRun(char * fileName) {
                 entryArraySize++;
                 continue;
             
-            case LINE_DATA:
-                if(!strlen(lc.label) || findLabelPosition(labelArray, labelArraySize, lc.label) == NOT_FOUND) { /* If the data has no name, or it has a name and it isn't in the label array */
+            case LINE_VARIABLE:
+                if(!strlen(lc.label) || findLabelPosition(labelArray, labelArraySize, lc.label) == NOT_FOUND) { /* If the variable has no name, or it has a name and it isn't in the label array */
                     addDataLabel(&labelArray, labelArraySize, lc.label, lc.data, lc.dataLength);
                     labelArraySize++;
                     continue;
                 }
 
+                /* If the variable is already in the labels array */
                 validFile = false;
 
                 if(labelArray[l].isExternal)
@@ -144,29 +158,34 @@ void firstRun(char * fileName) {
         }
         /* The only option left is that the line is a command */
 
-        cmd = parseCommand(lc.commandWithoutLabel);
+        cmd = parseCommand(lc.commandWithoutLabel); /* Parse the command */
         
+        /* If the command is invalid */
         if(!cmd.validCommand) {
             validFile = false;
             printf("Error in file (%s) on line (%d) - %s\n", fileToOpen, lineNumber, cmd.errorMessage);
             continue;
         }
-
-        if(cmd.commandType == JMP || cmd.commandType == BNE || cmd.commandType == JSR) {
+        
+        /* If the command is a jump command and the jump parameter is a label, we need to add its name to the labelsToCheckArray */
+        if(isJumpCommand(cmd.commandType)) {
             if(getAddressingMode(cmd.jumpLabel) == addressingMode_DIRECT) {
                 addEntry(&labelsToCheckArray, labelsToCheckSize, cmd.jumpLabel, lineNumber);
                 labelsToCheckSize++;
             }
         }
         
+        /* If the command has a label */
         if(lc.label[0] != '\0') {
             int labelPos = findLabelPosition(labelArray, labelArraySize, lc.label);
 
+            /* If this label isn't in the data/commands/external labels array */
             if(labelPos == NOT_FOUND) {
                 addLabel(&labelArray, labelArraySize, lc.label, false, wordCount);
                 labelArraySize++;
             }
 
+            /* If this label already exists in the data/commands/external labels array */
             else {
                 validFile = false;
 
@@ -183,6 +202,7 @@ void firstRun(char * fileName) {
             }
         }
 
+        /* If the src/dest parameters are labels, we need to add them to the labelsToCheckArray */
         if(cmd.srcAddressing == addressingMode_DIRECT) {
             addEntry(&labelsToCheckArray, labelsToCheckSize, cmd.srcParameter, lineNumber);
             labelsToCheckSize++;
@@ -193,7 +213,7 @@ void firstRun(char * fileName) {
             labelsToCheckSize++;
         }
 
-        wordCount += cmd.numOfWords;
+        wordCount += cmd.numOfWords; /* Increase wordcount */
     }
 
     fclose(f);
@@ -206,11 +226,16 @@ void firstRun(char * fileName) {
         return;
     }
 
-    if(!validateLabels(labelArray, labelArraySize, entryArray, entryArraySize, labelsToCheckArray, labelsToCheckSize)) {
+    /* If there are problematic labels, get a string that contains them (seperated with newlines) */
+    problems = getProblematicLabels(labelArray, labelArraySize, entryArray, entryArraySize, labelsToCheckArray, labelsToCheckSize);
+
+    if(problems != NULL) {
         printf("Error in file (%s) - The following labels weren't declared in the source code but were used as paraemters/entry labels: \n",
         fileToOpen);
         
-        printProblematicLabels(labelArray, labelArraySize, entryArray, entryArraySize, labelsToCheckArray, labelsToCheckSize);
+        printf("%s", problems);
+
+        free(problems);        
         
         cleanUp(labelArray, labelArraySize, entryArray, labelsToCheckArray);
 
@@ -221,9 +246,9 @@ void firstRun(char * fileName) {
         free(labelsToCheckArray);
     }
 
-    endingOfCommandsEncoding = wordCount;
+    endingOfCommandsEncoding = wordCount; /* Get the id of the first word that doesn't belong to a command */
     
-    dataWordsCount = addAddressesToDataLabels(labelArray, labelArraySize, &wordCount);
+    dataWordsCount = addAddressesToDataLabels(labelArray, labelArraySize, &wordCount); /* Add addresses to variables and get the number of words that these labels occupy at the end of the output file */
 
     secondRun(fileName, labelArray, labelArraySize, entryArray, entryArraySize, endingOfCommandsEncoding, dataWordsCount);
 }

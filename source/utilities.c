@@ -8,6 +8,9 @@
 
 #define GetBit(num, bit) (num & (1 << bit)) > 0 ? 1 : 0
 
+void removeSpacesFromStart(char *);
+void removeTrailingSpaces(char *);
+
 /* This function recieves a string and retruns true if this string only contains spaces and tabs, and false otherwise. */
 bool onlySpacesAndTabs(char * line) {
     int length = strlen(line);
@@ -252,6 +255,7 @@ void getBase2(char * string, int n, int numOfBits) {
     }
 }
 
+/* This function recieves a string in regular base 2 and converts it to unique base 2 */
 void convertToUniqueBase2(char * word) {
     int len;
     int i;
@@ -301,6 +305,12 @@ void removeSpacesFromStart(char * string) {
 
     memcpy(tempString, string + start, len - start);
     strcpy(string, tempString);
+}
+
+/* This function remove spaces/tabs/newlines from the beginning and the end of a string. */
+void removeRedundantSpaces(char * string) {
+    removeSpacesFromStart(string);
+    removeTrailingSpaces(string);
 }
 
 /* This function adds a string to a file writing buffer, and if the buffer doesn't have enough space left to concatenate
