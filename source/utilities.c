@@ -226,7 +226,7 @@ void getBase2(char * string, int n, int numOfBits) {
     /* I'm scanning each bit from left to right and concatenating the bit to the string */
 
     for(i = 0, j = numOfBits - 1 ; j >= 0 ; j--, i++)
-        string[i] = (GetBit(positive, j) == 1) ? ONE : ZERO;
+        string[i] = (GetBit(positive, j) == 1) ? '1' : '0';
     
 
     string[numOfBits] = '\0'; /* End the string */
@@ -239,16 +239,31 @@ void getBase2(char * string, int n, int numOfBits) {
 
     /* Invert all bits */
     for(i = 0 ; i < numOfBits ; i++)
-        string[i] = (string[i] == ZERO) ? ONE : ZERO;
+        string[i] = (string[i] == '0') ? '1' : '0';
 
     /* add 1 */
     for(i = numOfBits - 1 ; i >= 0 ; i--) {
-        if(string[i] == ZERO) {
-            string[i] = ONE;
+        if(string[i] == '0') {
+            string[i] = '1';
             break;
         }
 
-        string[i] = ZERO;
+        string[i] = '0';
+    }
+}
+
+void convertToUniqueBase2(char * word) {
+    int len;
+    int i;
+
+    len = strlen(word);
+
+    for(i = 0 ; i < len ; i++) {
+        if(word[i] == '1')
+            word[i] = ONE;
+
+        else if(word[i] == '0')
+            word[i] = ZERO;
     }
 }
 

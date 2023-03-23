@@ -1,3 +1,3 @@
 
-void secondRun(char * fileName, LabelNode * labelArray, int labelArraySize, EntryNode * entryArray, int entryArraySize);
-void writeDataToFile(FILE * o, LabelNode * labelArray, int labelArraySize, int * wordCount);
+void secondRun(char *, LabelNode *, int, EntryNode *, int, int, int);
+void writeDataToFile(FILE *, LabelNode *, int, int *);

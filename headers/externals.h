@@ -1,3 +1,3 @@
 
-void checkForExternals(commandOutput, LabelNode *, int, LabelNode **, int *, int);
-void createExternalsFile(char *, LabelNode *, int);
+void checkForExternals(LabelNode *, int, EntryNode **, int *, char *, int);
+void createExternalsFile(char *, EntryNode *, int);

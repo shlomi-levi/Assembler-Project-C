@@ -11,18 +11,20 @@ In addition to that it encodes the data the source code had (if it had) and crea
 #include "../headers/entries.h"
 
 /* This function does the second pass on the source file, with the labels and entry tables */
-void secondRun(char * fileName, LabelNode * labelArray, int labelArraySize, EntryNode * entryArray, int entryArraySize) {
+void secondRun(char * fileName, LabelNode * labelArray, int labelArraySize, EntryNode * entryArray, int entryArraySize, int endingOfCommandsEncoding, int dataWordsCount) {
     char fileToOpen[MAX_FILENAME_LEN];
     char fileToWriteTo[MAX_FILENAME_LEN];
     char line[MAX_LINE_LENGTH];
     char buffer[BUFFER_SIZE]; /* Buffer array. */
     char temp[MAX_CHARS_PER_COMMAND]; /* This will be used to story commands encodings before adding them to the buffer. */
 
-    LabelNode * externalsArray = NULL; /* A table for the .externals file */
+    EntryNode * externalsArray = NULL; /* A table for the .externals file */
     int externalsArraySize = 0; /* Size of the externals table. we will use this to expand the table when needed */
 
     int wordCount = FIRST_WORD_INDEX_IN_OUTPUT_FILE; /* Since the first word starts in index 100 */
     int bufferLen = 0;
+
+    int numOfCommandWords = endingOfCommandsEncoding - FIRST_WORD_INDEX_IN_OUTPUT_FILE;
 
     FILE * f = NULL;
     FILE * o = NULL;
@@ -42,6 +44,10 @@ void secondRun(char * fileName, LabelNode * labelArray, int labelArraySize, Entr
     }
     
     memset(buffer, 0, BUFFER_SIZE); /* Clear the buffer */
+    
+    sprintf(line, "\t%d %d\n", numOfCommandWords, dataWordsCount);
+
+    addToBuffer(buffer, BUFFER_SIZE, line, &bufferLen, o);
 
     /* Reads a line from the file */
     
@@ -61,9 +67,7 @@ void secondRun(char * fileName, LabelNode * labelArray, int labelArraySize, Entr
         
         cmd = parseCommand(lc.commandWithoutLabel); /* Parse the command */
 
-        checkForExternals(cmd, labelArray, labelArraySize, &externalsArray, &externalsArraySize, wordCount); /* Check if the current command has external labels in it */
-        
-        getCommandEncoding(temp, cmd, labelArray, labelArraySize, &wordCount); /* Get the current command's encoding. */
+        getCommandEncoding(temp, cmd, labelArray, labelArraySize, &externalsArray, &externalsArraySize, &wordCount); /* Get the current command's encoding. */
 
         addToBuffer(buffer, BUFFER_SIZE, temp, &bufferLen, o); /* Add the current command's encoding to the buffer. */
     }
@@ -114,6 +118,8 @@ void writeDataToFile(FILE * o, LabelNode * labelArray, int labelArraySize, int *
             int d = l.labelData[j];
             
             getBase2(base2String, d, NUM_OF_BITS);
+            
+            convertToUniqueBase2(base2String);
             
             sprintf(temp, "%.4d\t%s\n", (*wordCount), base2String); /* Format temp string */
             

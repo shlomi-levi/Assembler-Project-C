@@ -3,40 +3,20 @@
 #include "../headers/externals.h"
 #include "../headers/commands.h"
 
-void checkForExternals(commandOutput cmd, LabelNode * labelArray, int labelArraySize, LabelNode ** externalsArray, int * externalsArraySize, int wordCount) {
-    enum addressingModes am;
-
-    char * stuffToCheck [3];
-
-    int i;
+void checkForExternals(LabelNode * labelArray, int labelArraySize, EntryNode ** externalsArray, int * externalsArraySize, char * param, int address) {
     int labelPos;
-
-    stuffToCheck[0] = cmd.srcParameter;
-    stuffToCheck[1] = cmd.destParameter;
-    stuffToCheck[2] = cmd.jumpLabel;
-
-    for(i = 0 ; i < 3 ; i++) {
-        char * curr = stuffToCheck[i];
         
-        if(curr[0] == '\0')
-            continue;
-        
-        am = getAddressingMode(curr);
+    labelPos = findLabelPosition(labelArray, labelArraySize, param);
+    
+    if(!labelArray[labelPos].isExternal)
+        return;
 
-        if(am != addressingMode_DIRECT)
-            continue;
-        
-        labelPos = findLabelPosition(labelArray, labelArraySize, curr);
-        if(!labelArray[labelPos].isExternal)
-            continue;
+    addEntry(externalsArray, (*externalsArraySize), param, address);
 
-        addLabel(externalsArray, (*externalsArraySize), curr, false, wordCount);
-
-        (* externalsArraySize) ++;
-    }
+    (* externalsArraySize) ++;
 }
 
-void createExternalsFile(char * fileName, LabelNode * externalsArray, int externalsArraySize) {
+void createExternalsFile(char * fileName, EntryNode * externalsArray, int externalsArraySize) {
     char fileToCreate[MAX_LINE_LENGTH];
     char String[MAX_LINE_LENGTH];
     char buffer[BUFFER_SIZE];
@@ -58,7 +38,7 @@ void createExternalsFile(char * fileName, LabelNode * externalsArray, int extern
     memset(buffer, 0, BUFFER_SIZE);
 
     for(i = 0 ; i < externalsArraySize ; i++) {
-        sprintf(String, "%s\t %d\n", externalsArray[i].labelName, externalsArray[i].labelAddress);
+        sprintf(String, "%s\t %d\n", externalsArray[i].labelName, externalsArray[i].labelLine);
         
         addToBuffer(buffer, BUFFER_SIZE, String, &currBufferLen, f);
     }

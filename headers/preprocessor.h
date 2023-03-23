@@ -1,6 +1,6 @@
 
-void checkIfFilesExist(int argc, char * argv[]);
+void checkIfFilesExist(int, char * []);
 
-void preProcessFiles(int argc, char * argv[]);
+void preProcessFiles(int, char * []);
 
 void preProcessFile(char *);

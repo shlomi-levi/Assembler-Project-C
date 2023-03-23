@@ -11,5 +11,8 @@ gcc -c -Wall -ansi -pedantic entries.c
 gcc -c -Wall -ansi -pedantic externals.c
 gcc -c -Wall -ansi -pedantic cleanup.c
 
-gcc -Wall -ansi -pedantic assembler.c commands.o encoding.o cleanup.o entries.o externals.o firstrun.o input.o labels.o macros.o preprocessor.o secondrun.o utilities.o -o program
+gcc -Wall -ansi -pedantic assembler.c commands.o encoding.o cleanup.o entries.o externals.o firstrun.o input.o labels.o macros.o preprocessor.o secondrun.o utilities.o
+
+del *.o
+
 pause

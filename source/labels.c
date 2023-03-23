@@ -171,8 +171,9 @@ void printProblematicLabels(LabelNode * labelArray, int labelArraySize, EntryNod
     }
 }
 
-void addAddressesToDataLabels(LabelNode * labelArray, int labelArraySize, int * wordCount) {
+int addAddressesToDataLabels(LabelNode * labelArray, int labelArraySize, int * wordCount) {
     int i;
+    int count = 0;
 
     for(i = 0 ; i < labelArraySize ; i++) {
         LabelNode * l = &labelArray[i];
@@ -180,8 +181,12 @@ void addAddressesToDataLabels(LabelNode * labelArray, int labelArraySize, int * 
         if(!l->isDataLabel)
             continue;
         
+        count+= l->dataCount;
+
         l->labelAddress = (*wordCount);
 
         (*wordCount) += l->dataCount;
     }
+
+    return count;
 }

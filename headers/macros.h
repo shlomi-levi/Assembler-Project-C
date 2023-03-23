@@ -1,6 +1,6 @@
 
 bool isMacroDefinitionStatement(char *);
-void getMacroName(char * word, int wordLen, char * line);
+void getMacroName(char *, int, char *);
 int isExistingMacro(MacroNode *, char *, int);
 bool macroEnding(char *);
 bool isLegalMacroName(char *);

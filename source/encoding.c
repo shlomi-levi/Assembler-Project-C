@@ -2,6 +2,7 @@
 #include "../headers/labels.h"
 #include "../headers/commands.h"
 #include "../headers/encoding.h"
+#include "../headers/externals.h"
 
 #define START_OF_BINARY_REPRESENTATION_IN_SRC_REGISTER 5
 #define END_OF_BINARY_REPRESENTATION_IN_SRC_REGISTER 0
@@ -15,7 +16,7 @@
 #define START_DST START_OF_BINARY_REPRESENTATION_IN_DST_REGISTER
 #define END_DST END_OF_BINARY_REPRESENTATION_IN_DST_REGISTER
 
-void getCommandEncoding(char * output, commandOutput cmd, LabelNode * labelArray, int labelArraySize, int * wordCount) {
+void getCommandEncoding(char * output, commandOutput cmd, LabelNode * labelArray, int labelArraySize, EntryNode ** externalsArray, int * externalsArraySize, int * wordCount) {
     char word[WORD_LENGTH];
     char temp[MAX_LINE_LENGTH];
     char encodingSrc[WORD_LENGTH];
@@ -32,6 +33,8 @@ void getCommandEncoding(char * output, commandOutput cmd, LabelNode * labelArray
 
     generateFirstWord(word, cmd);
 
+    convertToUniqueBase2(word);
+
     sprintf(temp, "%.4d\t%s\n", *wordCount, word);
 
     strcat(output, temp);
@@ -43,7 +46,12 @@ void getCommandEncoding(char * output, commandOutput cmd, LabelNode * labelArray
     if(cmd.commandType == BNE || cmd.commandType == JMP || cmd.commandType == JSR) {
         enum addressingModes am = getAddressingMode(cmd.jumpLabel);
 
+        if(am == addressingMode_DIRECT)
+            checkForExternals(labelArray, labelArraySize, externalsArray, externalsArraySize, cmd.jumpLabel, *wordCount);
+
         getEncoding(word, am, cmd.jumpLabel, NONE, labelArray, labelArraySize);
+
+        convertToUniqueBase2(word);
 
         sprintf(temp, "%.4d\t%s\n", *wordCount, word);
         
@@ -58,6 +66,9 @@ void getCommandEncoding(char * output, commandOutput cmd, LabelNode * labelArray
     if(cmd.destAddressing != addressingMode_IRRELEVANT)
         getEncoding(encodingDest, cmd.destAddressing, cmd.destParameter, DESTINATION_REGISTER, labelArray, labelArraySize);
     
+    convertToUniqueBase2(encodingSrc);
+    convertToUniqueBase2(encodingDest);
+
     if(cmd.srcAddressing == addressingMode_REGISTER_IMMEDIATE && cmd.destAddressing == cmd.srcAddressing) {
         for(i = START_DST ; i >= END_DST ; i--)
             encodingSrc[i] = encodingDest[i];
@@ -71,6 +82,10 @@ void getCommandEncoding(char * output, commandOutput cmd, LabelNode * labelArray
     }
 
     if(cmd.srcAddressing != addressingMode_IRRELEVANT) {
+
+        if(cmd.srcAddressing == addressingMode_DIRECT)
+            checkForExternals(labelArray, labelArraySize, externalsArray, externalsArraySize, cmd.srcParameter, *wordCount);
+
         sprintf(temp, "%.4d\t%s\n", *wordCount, encodingSrc);
         strcat(output, temp);
 
@@ -78,6 +93,10 @@ void getCommandEncoding(char * output, commandOutput cmd, LabelNode * labelArray
     }
 
     if(cmd.destAddressing != addressingMode_IRRELEVANT) {
+
+        if(cmd.destAddressing == addressingMode_DIRECT)
+            checkForExternals(labelArray, labelArraySize, externalsArray, externalsArraySize, cmd.destParameter, *wordCount);
+        
         sprintf(temp, "%.4d\t%s\n", *wordCount, encodingDest);
         strcat(output, temp);
 

@@ -24,6 +24,9 @@ void firstRun(char * fileName) {
     int lineNumber = 0;
     int wordCount = FIRST_WORD_INDEX_IN_OUTPUT_FILE;
 
+    int endingOfCommandsEncoding;
+    int dataWordsCount;
+    
     int l;
     int e;
 
@@ -218,7 +221,9 @@ void firstRun(char * fileName) {
         free(labelsToCheckArray);
     }
 
-    addAddressesToDataLabels(labelArray, labelArraySize, &wordCount);
+    endingOfCommandsEncoding = wordCount;
+    
+    dataWordsCount = addAddressesToDataLabels(labelArray, labelArraySize, &wordCount);
 
-    secondRun(fileName, labelArray, labelArraySize, entryArray, entryArraySize);
+    secondRun(fileName, labelArray, labelArraySize, entryArray, entryArraySize, endingOfCommandsEncoding, dataWordsCount);
 }
