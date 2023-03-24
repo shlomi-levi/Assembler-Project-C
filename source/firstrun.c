@@ -57,7 +57,7 @@ void firstRun(char * fileName) {
     
     while(fgets(line, MAX_LINE_LENGTH, f) != NULL) {
         lineNumber++; /* Advance the line number */
-
+        
         removeRedundantSpaces(line); /* Get rid of spaces from start and end. */
 
         lc = classifyLine(line, false); /* Classify the line */
@@ -217,14 +217,6 @@ void firstRun(char * fileName) {
     }
 
     fclose(f);
-    
-    /* If the assembly code already had errors in it, or the last line is an error, we don't need
-    to create output files */
-
-    if(!validFile) {
-        cleanUp(labelArray, labelArraySize, entryArray, labelsToCheckArray);
-        return;
-    }
 
     /* If there are problematic labels, get a string that contains them (seperated with newlines) */
     problems = getProblematicLabels(labelArray, labelArraySize, entryArray, entryArraySize, labelsToCheckArray, labelsToCheckSize);
@@ -235,16 +227,23 @@ void firstRun(char * fileName) {
         
         printf("%s", problems);
 
-        free(problems);        
-        
-        cleanUp(labelArray, labelArraySize, entryArray, labelsToCheckArray);
+        free(problems);
 
+        validFile = false;
+    }
+
+    printf("\n\n");
+    
+    /* If the assembly code already had errors in it, or the last line is an error, we don't need
+    to create output files */
+
+    if(!validFile) {
+        cleanUp(labelArray, labelArraySize, entryArray, labelsToCheckArray);
         return;
     }
 
-    if(labelsToCheckArray != NULL) {
+    if(labelsToCheckArray != NULL)
         free(labelsToCheckArray);
-    }
 
     endingOfCommandsEncoding = wordCount; /* Get the id of the first word that doesn't belong to a command */
     

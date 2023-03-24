@@ -41,7 +41,7 @@ void preProcessFile(char * fileName) {
     FILE * input = NULL;
     FILE * output = NULL;
 
-    MacroNode * macroTable; /* Macro Table */
+    MacroNode * macroTable = NULL; /* Macro Table */
     MacroNode currentMacro; /* Current Macro we're working on */
 
     bool macroDefinitionInProcess = false;
@@ -176,7 +176,7 @@ void preProcessFile(char * fileName) {
         }
         free(macroTable);
     }
-        
+
     if(!validFile) { /* If the .as file had errors, remove the output file (the '.am' file). */
         remove(fileToWriteTo);
         return;

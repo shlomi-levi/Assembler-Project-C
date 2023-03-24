@@ -1,0 +1,8 @@
+mov r3, LABEL
+prn LABEL2
+
+INVALIDDATA: .data 1, 
+INVALIDDATA2: .data "abcd" 
+INVALIDDATA3: .string "ab 
+.entry abcde 
+inc -3 

@@ -196,9 +196,13 @@ char * getProblematicLabels(LabelNode * labelArray, int labelArraySize, EntryNod
        
         tempLen = sprintf(temp, "Line (%d) - label `%s`\n", entryArray[i].labelLine, entryArray[i].labelName);
 
+        /* +1 is for '\0' character */
+
         out = (found) ? my_realloc(out, outSize + tempLen + 1) : my_malloc(tempLen + 1);
 
-        outSize += tempLen + 1; /* +1 is for '\0' character */
+        memset(out + outSize, 0, tempLen + 1);
+
+        outSize += tempLen + 1;
         
         found = true;
 
@@ -213,14 +217,20 @@ char * getProblematicLabels(LabelNode * labelArray, int labelArraySize, EntryNod
 
         tempLen = sprintf(temp, "Line (%d) - label `%s`\n", labelsToCheckArray[i].labelLine, labelsToCheckArray[i].labelName);
 
+        /* +1 is for '\0' character */
+
         out = (found) ? my_realloc(out, outSize + tempLen + 1) : my_malloc(tempLen + 1);
 
-        outSize += tempLen + 1; /* +1 is for '\0' character */
+        memset(out + outSize, 0, tempLen + 1);
+
+        outSize += tempLen + 1;
         
         found = true;
 
         strcat(out, temp);
+
     }
+
     return out;
 }
 

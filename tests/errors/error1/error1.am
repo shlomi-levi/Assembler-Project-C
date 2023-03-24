@@ -1,0 +1,8 @@
+LABEL2: .entry PL 
+LABEL: mov r1, r2 
+LABEL: .extern W 
+mov 15r, r1 
+mov r1, 2 
+cmp 
+stop 5 
+jmp ABC(r1,r2) 

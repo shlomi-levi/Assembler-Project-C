@@ -10,9 +10,9 @@ static const COMMANDS_INFO commands [NUM_OF_COMMANDS] = {
         { "cmp", CMP, 2, {true, true, true}, {true, true, true}},
         { "add", ADD, 2, {true, true, true}, {false, true, true}},
         { "sub", SUB, 2, {true, true, true}, {false, true, true}},
-        { "lea", LEA, 2, {false, true, false}, {false, true, true}},
         { "not", NOT, 1, {false, false, false}, {false, true, true}},
         { "clr", CLR, 1, {false, false, false}, {false, true, true}},
+        { "lea", LEA, 2, {false, true, false}, {false, true, true}},
         { "inc", INC, 1, {false, false, false}, {false, true, true}},
         { "dec", DEC, 1, {false, false, false}, {false, true, true}},
         { "jmp", JMP, 1, {false, false, false}, {false, true, true}},
@@ -31,16 +31,15 @@ commandOutput parseCommand(char * line) {
     commandOutput output;
 
     char word[MAX_LINE_LENGTH];
-
-    char outputWord[MAX_OUTPUT_WORD];
     char number[MAX_LINE_LENGTH];
+
     COMMANDS_INFO cmd;
 
     enum addressingModes mode;
 
     output = createEmptyCommandOutput();
 
-    memset(outputWord, 0, MAX_OUTPUT_WORD);
+    removeRedundantSpaces(line); /* Get rid of spaces from start and end of command */
 
     getWord(word, MAX_LINE_LENGTH, &line); /* Firstly, get the commands name */
 
@@ -319,9 +318,15 @@ void handleJumpCommand(commandOutput * output, COMMANDS_INFO cmd, char * line) {
 
     getWord(word, MAX_LINE_LENGTH, &line); /* This is already after we have removed the command's name from the line */
 
-    if(!isEmptyLine(line)) {
+    if(isEmptyLine(word)) {
         output->validCommand = false;
         strcpy(output->errorMessage, "Jump command with no destination parameter");
+        return;
+    }
+
+    if(!isEmptyLine(line)) {
+        output->validCommand = false;
+        strcpy(output->errorMessage, "No spaces are allowed after the jump parameter. If you wish to add additional arguments with parenthesis (up to 2), do so without any spaces (even not inside the parenthesis)");
         return;
     }
 
