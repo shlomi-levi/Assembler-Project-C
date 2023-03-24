@@ -2,7 +2,9 @@
 #include "../headers/labels.h"
 #include "../headers/commands.h"
 
-/* An array that holds data about commands */
+/* An array that holds data about commands,
+The commands name, number of parameters, and for each parameter the legal addressing types. */
+
 static const COMMANDS_INFO commands [NUM_OF_COMMANDS] = {
         { "mov", MOV, 2, {true, true, true}, {false, true, true}},
         { "cmp", CMP, 2, {true, true, true}, {true, true, true}},
@@ -63,6 +65,8 @@ commandOutput parseCommand(char * line) {
     else {
         switch(cmd.numOfArguments) {
             case 0: {
+                /* If the command has 0 arguments, then after the command name we only allow spaces and tabs */
+
                 if(!isEmptyLine(line)) {
                     output.validCommand = false;
                     strcpy(output.errorMessage, "Invalid usage of command. This command has no parameters");
@@ -74,8 +78,10 @@ commandOutput parseCommand(char * line) {
             case 1: {
                 getFirstArgument(word, &line); /* This is the dest parameter since this command has only 1 paraemters */
                 
+                /* Check that the parameter isn't an empty line */
+
                 if(isEmptyLine(word)) {
-                    strcpy(output.errorMessage, "Invalid number of arguments. This command need to have 1 argument.");
+                    strcpy(output.errorMessage, "Invalid number of arguments. This command needs to have 1 argument.");
                     output.validCommand = false;
                     break;                
                 }
@@ -84,6 +90,8 @@ commandOutput parseCommand(char * line) {
 
                 if(!output.validCommand)
                     break;
+
+                /* If the command has 1 arguments, then after the dest parameter we only allow spaces and tabs */
 
                 if(!isEmptyLine(line)) /* After we have read the first parameter, we need to make sure that the line is empty */ {
                     strcpy(output.errorMessage, "Invalid usage of command. This command has only 1 parameter");
@@ -188,6 +196,7 @@ and if that argument is an immediate, it makes sure it is in the range of 12 bit
 void handleArgument(char * word, commandOutput * output, AddressingStruct legalAddressing, char * number, int argNumber) {
     enum addressingModes mode = getAddressingMode(word);
 
+    /* Verify that the argument has a legal addressing mode */
     if(!validAddressingMode(mode, legalAddressing)) {
         sprintf(output->errorMessage, "Invalid addressing mode for argument number (%d)", argNumber);
         output->validCommand = false;
@@ -204,6 +213,9 @@ void handleArgument(char * word, commandOutput * output, AddressingStruct legalA
     }
 }
 
+/* This function recieves an immediate (#number) and parses the number to ret.
+If the argument is illegal, It changes the appropriate fields in output */
+
 void parseImmediate(char * ret, char * word, commandOutput * output) {
     int num;
     int numLen;
@@ -214,14 +226,22 @@ void parseImmediate(char * ret, char * word, commandOutput * output) {
 
     char number[MAX_NUMBER_LENGTH];
 
-    word++; /* get rid of '#' sign */    
+    if(word[0] != '#') {
+        output->validCommand = false;
+        strcpy(output->errorMessage, "Immediate value should start with '#'");
+        return;
+    }
 
+    word++; /* get rid of '#' char */
+
+    /* If the word doesn't represent a number */
     if(!isNumber(word)) {
         output->validCommand = false;
         strcpy(output->errorMessage, "Invalid immediate value");
         return;
     }
 
+    /* We allow '+' and '-' at the very beginning */
     if(word[0] == '-' || word[0] == '+') {
         start++;
 
@@ -231,6 +251,7 @@ void parseImmediate(char * ret, char * word, commandOutput * output) {
 
     end = strlen(word);
 
+    /* If the number starts with zeros, we don't care about them */
     while(start < end - 1) {
         if(word[start] != '0')
             break;
@@ -243,7 +264,7 @@ void parseImmediate(char * ret, char * word, commandOutput * output) {
 
     if(numLen > MAX_CHARS_IN_IMMEDIATE) {
         output->validCommand = false;
-        strcpy(output->errorMessage, "Immediate value must be in the range of 14 bits");
+        strcpy(output->errorMessage, "Immediate value must be in the range of 12 bits");
         return;
     }
 
@@ -254,7 +275,7 @@ void parseImmediate(char * ret, char * word, commandOutput * output) {
 
     if(num < MIN_VALUE_FOR_LABEL_OR_IMMEDIATE || num > MAX_VALUE_FOR_LABEL_OR_IMMEDIATE) {
         output->validCommand = false;
-        strcpy(output->errorMessage, "Immediate value must be in the range of 14 bits");
+        strcpy(output->errorMessage, "Immediate value must be in the range of 12 bits");
         return;
     }
 
@@ -268,9 +289,15 @@ void parseImmediate(char * ret, char * word, commandOutput * output) {
     strcpy(ret, number);
 }
 
+/* This function handles jump commands.
+A jump command should have a label name after the command's name, and can have up to two additional parameters in parenthesis after the label's name.
+The function recives a line pointer after the part of the jump command's name.
+If there are additional arguments (between 1-2) then they appear in parenthesis seperated with a comma (if theres two) and no spaces
+(neither between the jump parameter and the '(' character, and not inside the parenthesis themselves). */
+
 void handleJumpCommand(commandOutput * output, COMMANDS_INFO cmd, char * line) {
     char word[MAX_LINE_LENGTH];
-    char jumpDestination[MAX_LINE_LENGTH];
+    char jumpDestination[MAX_LINE_LENGTH]; /* For the jump parameter */
     char srcParam[MAX_LINE_LENGTH];
     char destParam[MAX_LINE_LENGTH];
 
@@ -284,8 +311,9 @@ void handleJumpCommand(commandOutput * output, COMMANDS_INFO cmd, char * line) {
     memset(srcParam, 0, MAX_LINE_LENGTH);
     memset(destParam, 0, MAX_LINE_LENGTH);
 
-    removeRedundantSpaces(line);
+    removeRedundantSpaces(line); /* Get rid of spaces */
 
+    /* In the case of jump commands, these two fields will refer to the two additional optional parameters. */
     output->srcAddressing = addressingMode_IRRELEVANT;
     output->destAddressing = addressingMode_IRRELEVANT;
 
@@ -293,13 +321,14 @@ void handleJumpCommand(commandOutput * output, COMMANDS_INFO cmd, char * line) {
 
     if(!isEmptyLine(line)) {
         output->validCommand = false;
-        strcpy(output->errorMessage, "Invalid number of arguments");
+        strcpy(output->errorMessage, "Jump command with no destination parameter");
         return;
     }
 
-    leftBrace = contains(word, '(');
-    rightBrace = contains(word, ')');
+    leftBrace = contains(word, '('); /* Get the position of the first left brace */
+    rightBrace = contains(word, ')'); /* Get the position of the first right brace */
 
+    /* If we have a left brace and dont have a right brace (or vice versa) the input is invalid */
     if( (leftBrace == DOESNT_CONTAIN && rightBrace != DOESNT_CONTAIN) || 
     (leftBrace != DOESNT_CONTAIN && rightBrace == DOESNT_CONTAIN) ) {
         output->validCommand = false;
@@ -307,8 +336,9 @@ void handleJumpCommand(commandOutput * output, COMMANDS_INFO cmd, char * line) {
         return;
     }
 
-    /* Now the string contains either contains both left brace and right brace, or neither of them */
+    /* Now the string either contains both left brace and right brace, or neither of them */
 
+    /* If it doesnt contain neither: */
     if(leftBrace == DOESNT_CONTAIN) {
         /* in this case we have no parameters */
         am = getAddressingMode(word);
@@ -320,17 +350,34 @@ void handleJumpCommand(commandOutput * output, COMMANDS_INFO cmd, char * line) {
 
         }
 
-        strcpy(output->jumpLabel, word);
+        strcpy(output->jumpLabel, word); /* Set command output's jump label */
 
         return;
     }
 
+    /* If we have a left brace and a right brace */
+
+    /* We need to make sure that we have exactly one left '(' and one ')' */
+    if(countOccurences(word, '(') > 1) {
+        output->validCommand = false;
+        strcpy(output->errorMessage, "Invalid usage of parenthesis. too many left parenthesis (max is 1)");
+        return;
+    }
+
+    if(countOccurences(word, ')') > 1) {
+        output->validCommand = false;
+        strcpy(output->errorMessage, "Invalid usage of parenthesis. too many right parenthesis (max is 1)");
+        return;
+    }
+
+    /* We also need to make sure that '(' appears before ')' */
     if(leftBrace != DOESNT_CONTAIN && rightBrace != DOESNT_CONTAIN && leftBrace > rightBrace) {
         output->validCommand = false;
         strcpy(output->errorMessage,  "Invalid usage of parenthesis - left parenthesis should appear before right parenthesis.");
         return;
     }
-
+    
+    /* If the position of the left brace is 0 (the first char in the array), that means we dont have a jump parameter */
     if(leftBrace == 0) {
         output->validCommand = false;
         strcpy(output->errorMessage, "Invalid label name");
@@ -338,23 +385,17 @@ void handleJumpCommand(commandOutput * output, COMMANDS_INFO cmd, char * line) {
     }
 
     memset(jumpDestination, 0, MAX_LINE_LENGTH);
-    substring(jumpDestination, word, 0, leftBrace - 1);
+    substring(jumpDestination, word, 0, leftBrace - 1); /* Get the jump parameter */
 
-    am = getAddressingMode(jumpDestination);
+    am = getAddressingMode(jumpDestination); /* Get the jump parameter's addressing mode */
 
-    if(!validAddressingMode(am, cmd.legalDestAddressing)) {
+    if(!validAddressingMode(am, cmd.legalDestAddressing)) { /* Check its validity */
         output->validCommand = false;
         strcpy(output->errorMessage, "Invalid addressing mode for destination parameter");
         return;
     }
 
     strcpy(output->jumpLabel, jumpDestination);
-
-    if(countOccurences(word, '(') > 1 || countOccurences(word, ')') > 1) {
-        output->validCommand = false;
-        strcpy(output->errorMessage, "Invalid number of parenthesis");
-        return;
-    }
     
     /* Check if there is anything besides whitespace after the right parenthesis */
     if(!isEmptyLine(line + rightBrace + 1)) {
@@ -363,19 +404,20 @@ void handleJumpCommand(commandOutput * output, COMMANDS_INFO cmd, char * line) {
         return;
     }
 
+    /* Check if there's more than one comma */
     if(countOccurences(word, ',') > 1) {
         output->validCommand = false;
         strcpy(output->errorMessage, "Invalid number of commas, should be 1 at most.");
         return;
     }
 
-    comma = contains(word, ',');
+    comma = contains(word, ','); /* Get the comma's position */
 
-    if(comma == DOESNT_CONTAIN)
+    if(comma == DOESNT_CONTAIN) /* If we dont have a comma, that means we have only 1 additional argument */
         substring(srcParam, word, leftBrace + 1, rightBrace - 1);
 
-    else {
-        if(comma < leftBrace || comma > rightBrace) {
+    else { /* If we do have a comma, that means we have two additional arguments */
+        if(comma < leftBrace || comma > rightBrace) { /* The comma must be located between the left brace and the right brace */
             output->validCommand = false;
             strcpy(output->errorMessage, "Comma should be found between the left parenthesis and the right parenthesis");
             return;
@@ -384,6 +426,7 @@ void handleJumpCommand(commandOutput * output, COMMANDS_INFO cmd, char * line) {
         substring(destParam, word, comma + 1, rightBrace - 1);
     }
 
+    /* Handle first additional argument */
     am = getAddressingMode(srcParam);
 
     if(am == addressingMode_INVALID) {
@@ -404,7 +447,10 @@ void handleJumpCommand(commandOutput * output, COMMANDS_INFO cmd, char * line) {
     else
         strcpy(output->srcParameter, srcParam);
 
-    if(destParam[0] != '\0') {
+    /* Before handling the second additional argument we first need to check if there is such */
+
+    if(destParam[0] != '\0') { /* We do it by checking if the destParam string starts with a null or not. */
+        /* Handle second additional argument */
         am = getAddressingMode(destParam);
     
         if(am == addressingMode_INVALID) {
@@ -428,6 +474,7 @@ void handleJumpCommand(commandOutput * output, COMMANDS_INFO cmd, char * line) {
         output->isJumpAddressing = true;
     }
 
+    /* Increase the number of words that this command has, according to its additional arguments */
     if(output->srcAddressing == addressingMode_REGISTER_IMMEDIATE && output->destAddressing == addressingMode_REGISTER_IMMEDIATE)
         output->numOfWords++;
     
@@ -439,6 +486,8 @@ void handleJumpCommand(commandOutput * output, COMMANDS_INFO cmd, char * line) {
             output->numOfWords++;
     }
 }
+
+/* A function that recieves a command's argument as a parameter and return this argument's addressing mode. */
 
 enum addressingModes getAddressingMode(char * argument) {
 
@@ -471,13 +520,13 @@ enum addressingModes getAddressingMode(char * argument) {
         return addressingMode_IMMEDIATE;
     }
 
-    /* Handle direct register */
+    /* Handle immediate register addressing mode */
     for(i = 0 ; i < NUM_OF_REGISTERS ; i++) {
         if(!strcmp(registersNames[i], argument))
             return addressingMode_REGISTER_IMMEDIATE;
     }
 
-    /* The only addressing mode that is left is direct addressing mode */
+    /* The only addressing mode that is left is direct addressing mode. meaning that we need to check if the argument is a valid label name. */
     
     if(!isValidLabelName(argument))
         return addressingMode_INVALID;
@@ -485,38 +534,49 @@ enum addressingModes getAddressingMode(char * argument) {
     return addressingMode_DIRECT;
 }
 
-void getFirstArgument(char *out, char ** line) {
-    char argument[MAX_LINE_LENGTH];
-    int wordLen;
+/* A function that recieves a output pointer and a pointer to a line pointer as a parameter and gets the second argument of that command
+and places it in the output char array
+It is guarenteed that *line points to a command line after the command name */
 
-    getWord(argument, MAX_LINE_LENGTH, line);
+void getFirstArgument(char * out, char ** line) {
+    int len;
 
-    wordLen = strlen(argument);
+    getWord(out, MAX_LINE_LENGTH, line);
+
+    len = strlen(out);
     
-    if(argument[wordLen - 1] == ',')
-        argument[wordLen - 1] = '\0';
-
-    strcpy(out, argument);
+    if(out[len - 1] == ',') /* If we have a comma at the end we dont need it. */
+        out[len - 1] = '\0';
 }
+
+/* A function that recieves a output pointer and a pointer to a line pointer as a parameter and gets the second argument of that command
+and places it in the output char array
+It is guarenteed that *line points to a command line after the first parameter of the command */
 
 void getSecondArgument(char * output, char ** line) {
     int len;
-    int i;
 
-    getWord(output, MAX_LINE_LENGTH, line);
+    getWord(output, MAX_LINE_LENGTH, line); /* Try to get the second parameter */
 
-    if(!strcmp(output, ",")) {
+    if(!strcmp(output, ",")) { /* If you got ',' get the next word (that is guarenteed to be the second parameter) */
         getWord(output, MAX_LINE_LENGTH, line);
         return;
     }
-
+    
+    /* for cases where we got ',' and the parameter right after (meaning that the parameter is not seperated from the comma with at least one space)*/
     if(output[0] == ',') {
+        /* Get rid of the first character of the string by using a helper array */
+        char helper[MAX_LINE_LENGTH];
+        memset(helper, 0, MAX_LINE_LENGTH);
+
         len = strlen(output);
 
-        for(i = 0 ; i < len ; i++)
-            output[i] = output[i + 1];
+        memcpy(helper, output + 1, len - 1); /* Copy from output[1] to output[len - 1], to get rid of the comma */
+        strcpy(output, helper); /* Copy helper to output */
     }
 }
+
+/* A function that recieves a string as a parameter and returns true if there's a command with that name */
 
 bool isCommand(char * input) {
     int i;
@@ -528,6 +588,9 @@ bool isCommand(char * input) {
     return false;
 }
 
+/* A function that recieves a word as a parameter and returns the command that this word represents.
+This function already assumes that the parameter it is given is a function. */
+
 COMMANDS_INFO findCommand(char * word) {
     int i;
 
@@ -535,14 +598,17 @@ COMMANDS_INFO findCommand(char * word) {
         if(!strcmp(commands[i].name, word))
             return commands[i];
     }
-    return commands[0];
+    return commands[0]; /* We won't get here anyway but we need to return some value at the end */
 }
+
+/* A function that recieves an addressing mode and a struct of legal addressing modes, and returns true if the addressing mode is a legal addressing mode in that struct */
 
 bool validAddressingMode(enum addressingModes am, AddressingStruct str) {
 
     if(am == addressingMode_INVALID)
         return false;
     
+    /* Basically just return the appropriate struct field */
     switch(am) {
         case addressingMode_IMMEDIATE:
             return str.Addressing_IMMEDIATE;
@@ -558,6 +624,8 @@ bool validAddressingMode(enum addressingModes am, AddressingStruct str) {
 
     return false;
 }
+
+/* A function that creates an empty command output */
 
 commandOutput createEmptyCommandOutput() {
     commandOutput c;
@@ -575,12 +643,16 @@ commandOutput createEmptyCommandOutput() {
     return c;
 }
 
+/* A function that recieves a command type as a parameter and returns true if that command is a jump command, false otherwise. */
+
 bool isJumpCommand(enum commandTypes cmdType) {
     if(cmdType == BNE || cmdType == JSR || cmdType == JMP)
         return true;
 
     return false;
 }
+
+/* A function that recieves a line as a parameter and returns true if that line is a comment, false otherwise. */
 
 bool isComment(char * line) {
     return (line[0] == ';') ? true : false;

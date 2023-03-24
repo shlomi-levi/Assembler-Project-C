@@ -52,6 +52,7 @@ enum addressingModes {
     addressingMode_REGISTER_IMMEDIATE = 3
 };
 
+/* Types of lines */
 enum lineTypes {
     LINE_INVALID,
     LINE_EMPTY,
@@ -68,12 +69,14 @@ enum REGISTER_TYPE {
     DESTINATION_REGISTER
 };
 
+/* Types of encodings */
 enum ENCODING {
     ENCODING_ABSOLUTE,
     ENCODING_RELOCATABLE,
     ENCODING_EXTERNAL
 };
 
+/* Types of commands */
 enum commandTypes {
     MOV = 0,
     CMP = 1,
