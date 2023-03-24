@@ -31,7 +31,7 @@ LineClassification classifyLine(char * line, bool isSecondRun) {
     char returnCommand[MAX_LINE_LENGTH];
     char word[MAX_LINE_LENGTH];
     
-    int colCounter = 0; /* for counting colons */
+    int colonLocation;
     bool hasLabel = false;
 
     memset(returnCommand, 0, MAX_LINE_LENGTH);
@@ -48,16 +48,9 @@ LineClassification classifyLine(char * line, bool isSecondRun) {
     
     getWord(word, MAX_LINE_LENGTH, &line); /* Get the first word of the line */
 
-    colCounter = countOccurences(word, ':'); /* count the number of colons */
-    
-    if(colCounter > 1) { /* If there's more than one colon, the line is invalid. */
-        lc.type = LINE_INVALID;
-        strcpy(lc.errorMessage, "Only one colon is allowed (and that is, when declaring a label).");
-        return lc;
-    }
+    colonLocation = contains(word, ':'); /* Find the position of the first colon (if there is such) */
 
-    if(colCounter == 1) { /* If there is one colon */
-        int colonLocation = contains(word, ':'); /* Find its position*/
+    if(colonLocation != DOESNT_CONTAIN ) {
         word[colonLocation] = '\0'; /* Temporarily place a null character in that position so we could treat what comes before as a seperate string */
         
         if(!isValidLabelName(word)) { /* If what comes before that colon isn't a valid label name, the line is invalid.*/
