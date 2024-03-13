@@ -4,11 +4,6 @@ The final assignment (#14) of the C course (20465) at The Open University.
 
 Semester 2023A
 
-Done by Shlomi Levi
-
-The project was graded 100!
-
-
 # Getting Started 
 The project was coded and compiled using Ubuntu, but it may run on all Linux versions.
 
